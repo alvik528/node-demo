@@ -8,7 +8,38 @@
 var express = require('express');
 var _db;
 
+function getAllTasks(req, res, next) {
+    _db.all('select rowid, title, done from Tasks where done=0', function(err, rows) {
+        if(err) {
+            return next(err);
+        }
+    });
+}
 
+function insertTask(req, res, next) {
+
+    if(!req.body.title || 0 ==req.body.title) {
+        return next(new Error('new tasks'));
+    }
+
+    _db.run('insert into Tasks (title, done) values (?,0)', req.body.title, function(err) {
+       if(err) {
+           return next(err);
+       }
+
+        res.json({rowid: this.lastID});
+
+    });
+}
+
+function updateTask(req, res, next) {
+    _db.run('update Tasks set done=? where row=?', req.body.done, req.params.id, function(err) {
+       if(err) {
+           return next(err);
+       }
+           res.json({rowsAffected: this.changes});
+    });
+}
 
 module.exports.Router = function(db) {
     //hold on to database reference
@@ -20,10 +51,14 @@ module.exports.Router = function(db) {
     //add routes for:
 
     //GET /tasks (gets all undone tasks)
-    //POST /tasks (inserts new task)
+    router.get('/tasks', getAllTasks);
 
+    //POST /tasks (inserts new task)
+    router.post('/tasks', insertTask);
     //GET /tasks/:id (gets a particular task)
     //PUT /tasks/:id (updates a particular task)
+    router.put('tasks/:id', updateTask);
+
     //DELETE /tasks/:id (deletes a particular task)
 
     return router;
